@@ -12,6 +12,10 @@ export class AssignTaskPage {
   private readonly adminMenu: Locator;
   private readonly workflowBtn: Locator;
   private readonly infoRows: Locator;
+  private readonly applyBtn: Locator;
+  private readonly taskLink: Locator;
+  private readonly profileMenu: Locator;
+  private readonly logoutButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -30,7 +34,11 @@ export class AssignTaskPage {
     this.appMenu = page.locator('[data-qa="header-mobile-app-menu-button"]');
     this.adminMenu = page.locator('[data-qa="header-Admin-tab-button"]');
     this.workflowBtn = page.locator('//span[text()="Workflows"]');
-    this.infoRows = page.locator('[name="information"]');
+    this.infoRows = page.locator('[name="information"] > div');
+    this.applyBtn = page.locator('//button[text()="Apply"]');
+    this.taskLink = page.locator('[title="Troubleshooting Activity_NDA"]');
+    this.profileMenu = page.locator('[data-qa="header-phone-profile-button"]');
+    this.logoutButton = page.locator('[data-qa="profile-menu-button-logoff"]');
   }
 
   async assignTask(): Promise<Page> {
@@ -63,10 +71,16 @@ export class AssignTaskPage {
       await this.crossBtn.first().click();
     }
     await this.workflowBtn.click();
+    await this.page.waitForLoadState();
+    await this.applyBtn.click();
+    await this.page.waitForLoadState();
+    await this.page.waitForTimeout(4000);
+
     for (let i = 0; i < (await this.infoRows.count()); i++) {
       const rowText = await this.infoRows.nth(i).textContent();
+      console.log(rowText, "NAME OF ROWS", userName);
       if (rowText?.includes(userName)) {
-        await this.infoRows.nth(i).click();
+        await this.taskLink.nth(i).click();
         break;
       }
     }
@@ -75,5 +89,21 @@ export class AssignTaskPage {
     ]);
     await newPage.waitForLoadState();
     return newPage;
+  }
+
+  async logout() {
+    await this.appMenu.click();
+    await this.profileMenu.click();
+    await this.logoutButton.click();
+    this.page.on("dialog", async (dialog) => {
+      await dialog.accept();
+    });
+    await this.appMenu.click();
+    await this.profileMenu.click();
+    await this.logoutButton.click();
+    this.page.on("dialog", async (dialog) => {
+      await dialog.accept();
+    });
+    await this.page.waitForLoadState();
   }
 }
