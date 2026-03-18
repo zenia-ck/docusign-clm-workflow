@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { test, expect, Page, BrowserContext } from "@playwright/test";
-import { LoginPage } from "../../pages/login/login.page";
+import { LoginPage } from "../../utils/login/login";
 import { DashboardPage } from "../../pages/dashboard/dashboard.page";
 import { WorkflowPage } from "../../pages/workflow/workflow.page";
 

@@ -1,15 +1,22 @@
 import "dotenv/config";
 import { faker } from "@faker-js/faker";
 import { test, expect, Page, BrowserContext } from "@playwright/test";
-import { LoginPage } from "../../pages/login/login.page";
+import { LoginPage } from "../../utils/login/login";
 import { AssignTaskPage } from "../../pages/tasks/assignTask.page";
 import { TroubleshootNDAPage } from "../../pages/tasks/troubleshootNDAForm.page";
 import { TroubleShootActivityNDAPage } from "../../pages/tasks/troubleshootActivityNda.page";
+import { TasksPage } from "../../pages/tasks/tasks.page";
+import { Logout } from "../../utils/logout/logout";
+
 test.describe.serial("DocuSign CLM Workflow Automation", () => {
   let page: Page;
   let context: BrowserContext;
   let loginPage: LoginPage;
   let assignTaskPage: AssignTaskPage;
+  let tasksPage: TasksPage;
+  let assignedEmail: string | null;
+  let assignedEmailForRouting: string | null;
+
   const userName = faker.person.fullName();
 
   test.beforeAll(async ({ browser }) => {
@@ -43,23 +50,86 @@ test.describe.serial("DocuSign CLM Workflow Automation", () => {
     const troubleshootActivityNDAPage = new TroubleShootActivityNDAPage(
       newPage,
     );
-    const assignedEmail =
-      await troubleshootActivityNDAPage.getTheAssignedEmail();
-    console.log("Assigned Email:", assignedEmail);
+    assignedEmail = await troubleshootActivityNDAPage.getTheAssignedEmail();
     await newPage.close();
     await parentPage.bringToFront();
-    await assignTaskPage.logout();
   });
 
-  test("Login with the assigned user", async () => {
+  test("Logout from the qa user for viewing the task from assigned user", async () => {
+    const logout = new Logout(page);
+    await logout.logout();
+  });
+
+  test("Login with the assigned user to check the task", async () => {
+    loginPage = new LoginPage(page);
+    await loginPage.login(assignedEmail!, process.env.DOCUSIGN_QA_PASSWORD!);
+  });
+
+  test("Go to tasks page and change the status to 'Send to Business manager'", async () => {
+    tasksPage = new TasksPage(page);
+    await tasksPage.goToTasksPage();
+    await tasksPage.matchInfoAndSendToBusinessManager(userName);
+  });
+
+  test("Logout from the assigned user to check the routing email", async () => {
+    const logout = new Logout(page);
+    await logout.logout();
+  });
+
+  test("Login with the QA user to check the next user", async () => {
     loginPage = new LoginPage(page);
     await loginPage.login(
-      process.env.DOCUSIGN_ASSIGNED_EMAIL!,
+      process.env.DOCUSIGN_QA_USERNAME!,
       process.env.DOCUSIGN_QA_PASSWORD!,
     );
   });
 
-  test.afterAll(async () => {
-    await context.close();
+  test("View the workflow and get the routing user", async () => {
+    assignTaskPage = new AssignTaskPage(page);
+    const parentPage = page;
+    const newPage = await assignTaskPage.viewTheWorkFlow(userName);
+    const troubleshootActivityNDAPage = new TroubleShootActivityNDAPage(
+      newPage,
+    );
+    assignedEmailForRouting =
+      await troubleshootActivityNDAPage.getTheAssignedEmailForRouting();
+    await newPage.close();
+    await parentPage.bringToFront();
   });
+
+  test("Logout from the qa user to change the status to approved", async () => {
+    const logout = new Logout(page);
+    await logout.logout();
+  });
+
+  test("Login with the next assigned user to change the status to approved", async () => {
+    loginPage = new LoginPage(page);
+    await loginPage.login(
+      assignedEmailForRouting!,
+      process.env.DOCUSIGN_QA_PASSWORD!,
+    );
+  });
+
+  test("Go to tasks page and change the status to 'Approved'", async () => {
+    tasksPage = new TasksPage(page);
+    await tasksPage.goToTasksPage();
+    await tasksPage.matchInfoAndApprove(userName);
+  });
+
+  test("Logout from the assigned user to check the next status", async () => {
+    const logout = new Logout(page);
+    await logout.logout();
+  });
+
+  test("Login with the QA user to check the next status as sent for signature", async () => {
+    loginPage = new LoginPage(page);
+    await loginPage.login(
+      process.env.DOCUSIGN_QA_USERNAME!,
+      process.env.DOCUSIGN_QA_PASSWORD!,
+    );
+  });
+
+  //   test.afterAll(async () => {
+  //     await context.close();
+  //   });
 });
