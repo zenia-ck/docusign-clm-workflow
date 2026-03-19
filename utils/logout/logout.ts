@@ -16,9 +16,17 @@ export class Logout {
     await this.appMenu.click();
     await this.profileMenu.click();
     await this.logoutButton.click();
-    this.page.on("dialog", async (dialog) => {
+
+    this.page.once("dialog", async (dialog) => {
       await dialog.accept();
     });
+    console.log(
+      "Logout button popup clicked",
+      this.page.url().includes("logout"),
+      !this.page.url().includes("logout"),
+      this.page.url(),
+    );
+
     await this.page.waitForTimeout(9000);
     if (!this.page.url().includes("logout")) {
       console.log(
@@ -29,7 +37,7 @@ export class Logout {
       await this.appMenu.click();
       await this.profileMenu.click();
       await this.logoutButton.click();
-      this.page.on("dialog", async (dialog) => {
+      this.page.once("dialog", async (dialog) => {
         await dialog.accept();
       });
     }

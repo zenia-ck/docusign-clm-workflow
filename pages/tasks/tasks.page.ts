@@ -54,6 +54,7 @@ export class TasksPage {
   }
 
   async matchInfoAndApprove(userName: string): Promise<void> {
+    await this.page.waitForTimeout(6000);
     for (let i = 0; i < (await this.infoRows.count()); i++) {
       const rowText = await this.infoRows.nth(i).textContent();
       if (rowText?.includes(userName)) {

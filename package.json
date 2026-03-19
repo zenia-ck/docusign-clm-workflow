@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "npx playwright test --headed --ui  --project=chromium docuSignCLMWorkflow.spec.ts  --trace on"
+    "test": "npx playwright test --headed --ui  --project=chromium docuSignCLMWorkflow.spec.ts  --trace on "
   },
   "keywords": [],
   "author": "",

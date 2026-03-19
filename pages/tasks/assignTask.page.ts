@@ -1,4 +1,4 @@
-import { Page, Locator } from "@playwright/test";
+import { Page, Locator, expect } from "@playwright/test";
 
 export class AssignTaskPage {
   private readonly page: Page;
@@ -14,6 +14,7 @@ export class AssignTaskPage {
   private readonly infoRows: Locator;
   private readonly applyBtn: Locator;
   private readonly taskLink: Locator;
+  private readonly statusRows: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -33,6 +34,7 @@ export class AssignTaskPage {
     this.adminMenu = page.locator('[data-qa="header-Admin-tab-button"]');
     this.workflowBtn = page.locator('//span[text()="Workflows"]');
     this.infoRows = page.locator('[name="information"] > div');
+    this.statusRows = page.locator('[name="status"] > div');
     this.applyBtn = page.locator('//button[text()="Apply"]');
     this.taskLink = page.locator('[title="Troubleshooting Activity_NDA"]');
   }
@@ -61,11 +63,8 @@ export class AssignTaskPage {
     await this.appMenu.click();
     await this.adminMenu.last().click();
     await this.page.waitForLoadState();
-    const introText = this.page.getByText("Introducing Workflow Templates");
-    await introText.waitFor({ state: "visible" });
-    if (await introText.isVisible()) {
+    if (await this.page.getByText("Introducing Workflow Templates").isVisible())
       await this.crossBtn.first().click();
-    }
     await this.workflowBtn.click();
     await this.page.waitForLoadState();
     await this.applyBtn.click();
@@ -84,5 +83,26 @@ export class AssignTaskPage {
     ]);
     await newPage.waitForLoadState();
     return newPage;
+  }
+
+  async checkWorkflowStatusAsCompleted(userName: string): Promise<void> {
+    await this.appMenu.click();
+    await this.adminMenu.last().click();
+    await this.page.waitForLoadState();
+    if (await this.page.getByText("Introducing Workflow Templates").isVisible())
+      await this.crossBtn.first().click();
+    await this.workflowBtn.click();
+    await this.page.waitForLoadState();
+    await this.applyBtn.click();
+    await this.page.waitForLoadState();
+    await this.page.waitForTimeout(4000);
+
+    for (let i = 0; i < (await this.infoRows.count()); i++) {
+      const rowText = await this.infoRows.nth(i).textContent();
+      if (rowText?.includes(userName)) {
+        await expect(this.statusRows.nth(i)).toContainText("Completed");
+        break;
+      }
+    }
   }
 }

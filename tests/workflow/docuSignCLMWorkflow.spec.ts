@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { faker } from "@faker-js/faker";
+import { chromium } from "@playwright/test";
 import { test, expect, Page, BrowserContext } from "@playwright/test";
 import { LoginPage } from "../../utils/login/login";
 import { AssignTaskPage } from "../../pages/tasks/assignTask.page";
@@ -7,6 +8,8 @@ import { TroubleshootNDAPage } from "../../pages/tasks/troubleshootNDAForm.page"
 import { TroubleShootActivityNDAPage } from "../../pages/tasks/troubleshootActivityNda.page";
 import { TasksPage } from "../../pages/tasks/tasks.page";
 import { Logout } from "../../utils/logout/logout";
+import { GmailLoginPage } from "../../pages/gmail/gmailLogin.page";
+import { DocuSignPage } from "../../pages/docusign/docusign.page";
 
 test.describe.serial("DocuSign CLM Workflow Automation", () => {
   let page: Page;
@@ -14,13 +17,21 @@ test.describe.serial("DocuSign CLM Workflow Automation", () => {
   let loginPage: LoginPage;
   let assignTaskPage: AssignTaskPage;
   let tasksPage: TasksPage;
+  let gmailLoginPage: GmailLoginPage;
   let assignedEmail: string | null;
   let assignedEmailForRouting: string | null;
 
   const userName = faker.person.fullName();
 
-  test.beforeAll(async ({ browser }) => {
-    context = await browser.newContext();
+  test.beforeAll(async () => {
+    context = await chromium.launchPersistentContext("data/gmail-user-data", {
+      headless: false,
+      channel: "chrome",
+      permissions: ["geolocation"],
+
+      args: ["--disable-blink-features=AutomationControlled"],
+    });
+
     page = await context.newPage();
 
     loginPage = new LoginPage(page);
@@ -127,6 +138,47 @@ test.describe.serial("DocuSign CLM Workflow Automation", () => {
       process.env.DOCUSIGN_QA_USERNAME!,
       process.env.DOCUSIGN_QA_PASSWORD!,
     );
+  });
+
+  test("View the workflow and get the assigned user and send for signature", async () => {
+    assignTaskPage = new AssignTaskPage(page);
+    const parentPage = page;
+    const newPage = await assignTaskPage.viewTheWorkFlow(userName);
+    const troubleshootActivityNDAPage = new TroubleShootActivityNDAPage(
+      newPage,
+    );
+    await troubleshootActivityNDAPage.verifyTheStatusAsSentForSignature();
+    await newPage.close();
+    await parentPage.bringToFront();
+  });
+
+  test("Logout from the assigned user to check the next status as completed", async () => {
+    const logout = new Logout(page);
+    await logout.logout();
+  });
+
+  test("Login to gmail and sign the document", async () => {
+    gmailLoginPage = new GmailLoginPage(page);
+    await page.goto("https://mail.google.com/");
+    const newPage = await gmailLoginPage.loginToGmailAndReviewDoc();
+    const docuSignPage = new DocuSignPage(newPage);
+    await context.grantPermissions(["geolocation"]);
+    await docuSignPage.signTheDocument();
+  });
+
+  test("Login with the QA user to check the next status as completed", async () => {
+    await page.goto("https://account-d.docusign.com");
+    loginPage = new LoginPage(page);
+    await loginPage.login(
+      process.env.DOCUSIGN_QA_USERNAME!,
+      process.env.DOCUSIGN_QA_PASSWORD!,
+    );
+  });
+
+  test("View the workflow and check the status as completed", async () => {
+    assignTaskPage = new AssignTaskPage(page);
+    const parentPage = page;
+    const newPage = await assignTaskPage.viewTheWorkFlow(userName);
   });
 
   //   test.afterAll(async () => {
