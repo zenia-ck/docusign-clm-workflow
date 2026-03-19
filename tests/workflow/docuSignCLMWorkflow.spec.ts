@@ -31,8 +31,7 @@ test.describe.serial("DocuSign CLM Workflow Automation", () => {
 
       args: ["--disable-blink-features=AutomationControlled"],
     });
-
-    page = await context.newPage();
+    page = context.pages()[0];
 
     loginPage = new LoginPage(page);
 
@@ -160,10 +159,13 @@ test.describe.serial("DocuSign CLM Workflow Automation", () => {
   test("Login to gmail and sign the document", async () => {
     gmailLoginPage = new GmailLoginPage(page);
     await page.goto("https://mail.google.com/");
+    const parentPage = page;
     const newPage = await gmailLoginPage.loginToGmailAndReviewDoc();
     const docuSignPage = new DocuSignPage(newPage);
     await context.grantPermissions(["geolocation"]);
     await docuSignPage.signTheDocument();
+    await newPage.close();
+    await parentPage.bringToFront();
   });
 
   test("Login with the QA user to check the next status as completed", async () => {
@@ -177,11 +179,10 @@ test.describe.serial("DocuSign CLM Workflow Automation", () => {
 
   test("View the workflow and check the status as completed", async () => {
     assignTaskPage = new AssignTaskPage(page);
-    const parentPage = page;
-    const newPage = await assignTaskPage.viewTheWorkFlow(userName);
+    await assignTaskPage.checkWorkflowStatusAsCompleted(userName);
   });
 
-  //   test.afterAll(async () => {
-  //     await context.close();
-  //   });
+  test.afterAll(async () => {
+    await context.close();
+  });
 });

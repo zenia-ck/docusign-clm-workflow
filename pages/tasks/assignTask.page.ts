@@ -3,12 +3,13 @@ import { Page, Locator, expect } from "@playwright/test";
 export class AssignTaskPage {
   private readonly page: Page;
   private readonly appSwitchBtn: Locator;
-  private readonly appChoiceBtn: Locator;
+  private readonly appMenu: Locator;
   private readonly clmBtn: Locator;
+  private readonly welcomePopupText: Locator;
+  private readonly introductionText: Locator;
   private readonly crossBtn: Locator;
   private readonly takeActionsButton: Locator;
   private readonly troubleshootNDAButton: Locator;
-  private readonly appMenu: Locator;
   private readonly adminMenu: Locator;
   private readonly workflowBtn: Locator;
   private readonly infoRows: Locator;
@@ -20,12 +21,15 @@ export class AssignTaskPage {
     this.page = page;
     this.appSwitchBtn = page.locator('[data-qa="header-app-menu-button"]');
     this.clmBtn = page.locator('[data-qa="CLM-launch-button"]');
+    this.welcomePopupText = page.locator(
+      '//div[text()="Welcome to Docusign CLM"]',
+    );
+    this.introductionText = page.locator(
+      '//div[text()="Introducing Workflow Templates"]',
+    );
     this.crossBtn = page.locator('[ng-click="ctrl.close()"]');
     this.takeActionsButton = page.locator(
       '[data-qa="header-ActionsMenuName-tab-button-content"]',
-    );
-    this.appChoiceBtn = page.locator(
-      '[data-qa="header-mobile-app-menu-button"]',
     );
     this.troubleshootNDAButton = page.locator(
       '//span[text()="Troubleshoot NDA"]',
@@ -39,18 +43,29 @@ export class AssignTaskPage {
     this.taskLink = page.locator('[title="Troubleshooting Activity_NDA"]');
   }
 
+  async handleNewTabPopups(page: Page): Promise<void> {
+    console.log(
+      await this.introductionText.isVisible(),
+      await this.welcomePopupText.isVisible(),
+      "VALUES",
+    );
+    if (
+      (await this.introductionText.isVisible()) ||
+      (await this.welcomePopupText.isVisible())
+    )
+      await this.crossBtn.first().click();
+  }
+
   async assignTask(): Promise<Page> {
     await this.page.waitForLoadState();
     await this.appSwitchBtn.click({ force: true });
     await this.clmBtn.click();
     await this.page.waitForLoadState();
-    const welcomeText = this.page.getByText("Welcome to Docusign CLM");
-    await welcomeText.waitFor({ state: "visible" });
-    if (await welcomeText.isVisible()) {
-      await this.crossBtn.click();
-    }
-    await this.appChoiceBtn.click();
+    await this.page.waitForTimeout(4000);
+    await this.handleNewTabPopups(this.page);
+    await this.appMenu.click();
     await this.takeActionsButton.click();
+    await this.handleNewTabPopups(this.page);
     await this.troubleshootNDAButton.click();
     const [newPage] = await Promise.all([
       this.page.context().waitForEvent("page"),
@@ -63,8 +78,8 @@ export class AssignTaskPage {
     await this.appMenu.click();
     await this.adminMenu.last().click();
     await this.page.waitForLoadState();
-    if (await this.page.getByText("Introducing Workflow Templates").isVisible())
-      await this.crossBtn.first().click();
+    await this.page.waitForTimeout(4000);
+    await this.handleNewTabPopups(this.page);
     await this.workflowBtn.click();
     await this.page.waitForLoadState();
     await this.applyBtn.click();
@@ -86,11 +101,15 @@ export class AssignTaskPage {
   }
 
   async checkWorkflowStatusAsCompleted(userName: string): Promise<void> {
+    await this.page.waitForLoadState();
+    await this.appSwitchBtn.click({ force: true });
+    await this.clmBtn.click();
+    await this.page.waitForLoadState();
+    await this.handleNewTabPopups(this.page);
     await this.appMenu.click();
     await this.adminMenu.last().click();
     await this.page.waitForLoadState();
-    if (await this.page.getByText("Introducing Workflow Templates").isVisible())
-      await this.crossBtn.first().click();
+    await this.handleNewTabPopups(this.page);
     await this.workflowBtn.click();
     await this.page.waitForLoadState();
     await this.applyBtn.click();
